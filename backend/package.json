@@ -1,0 +1,31 @@
+{
+  "name": "commit2fit-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down -v",
+    "migrate": "node-pg-migrate --envPath .env up --migrations-dir ./migrations --migrations-table migrations",
+    "migrate:down": "node-pg-migrate --envPath .env down --migrations-dir ./migrations --migrations-table migrations",
+    "db:reset": "npm run db:down && npm run db:up && npm run migrate && npm run seed",
+    "seed": "node scripts/seed.js",
+    "test": "cross-env NODE_ENV=test node-pg-migrate --envPath .env --database-url-var TEST_DATABASE_URL up --migrations-dir ./migrations --migrations-table migrations && cross-env NODE_ENV=test node --test --test-concurrency=1 tests/*.test.js"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "jsonwebtoken": "^9.0.2",
+    "node-pg-migrate": "^7.1.0",
+    "pg": "^8.13.0",
+    "swagger-ui-express": "^5.0.0",
+    "yaml": "^2.6.0"
+  },
+  "devDependencies": {
+    "@apidevtools/swagger-parser": "^10.0.0",
+    "cross-env": "^7.0.3",
+    "supertest": "^7.0.0"
+  }
+}
