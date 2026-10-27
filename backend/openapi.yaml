@@ -1,0 +1,401 @@
+openapi: 3.0.3
+info:
+  title: Commit2Fit API
+  version: 1.0.0
+  description: Sprint 2 backend API for user auth and product management.
+servers:
+  - url: http://localhost:3000
+paths:
+  /health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: Service healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+              example:
+                status: ok
+
+  /auth/register:
+    post:
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterInput'
+            examples:
+              register:
+                value:
+                  email: demo@commit2fit.test
+                  password: Demo1234!
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+              examples:
+                success:
+                  value:
+                    token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOjF9.signature
+                    user:
+                      id: 1
+                      email: demo@commit2fit.test
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/UserExists'
+
+  /auth/login:
+    post:
+      summary: Authenticate and receive a JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginInput'
+            examples:
+              login:
+                value:
+                  email: demo@commit2fit.test
+                  password: Demo1234!
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+              example:
+                token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOjF9.signature
+                user:
+                  id: 1
+                  email: demo@commit2fit.test
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/me:
+    get:
+      summary: Return the authenticated user profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+              example:
+                id: 1
+                email: demo@commit2fit.test
+                createdAt: '2025-01-01T12:00:00.000Z'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /products:
+    get:
+      summary: Search products by name or brand
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Partial search term for product name or brand.
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Paginated product list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductList'
+              example:
+                items:
+                  - id: 1
+                    barcode: '12345678'
+                    name: Greek Yogurt
+                    brand: Farm Fresh
+                    kcal: 59
+                    protein: 10
+                    carbs: 3.2
+                    fat: 1.5
+                    createdBy: 1
+                    createdAt: '2025-01-01T12:00:00.000Z'
+                total: 1
+                limit: 20
+                offset: 0
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      summary: Create a new product
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInput'
+            examples:
+              product:
+                value:
+                  barcode: '12345678'
+                  name: Greek Yogurt
+                  brand: Farm Fresh
+                  kcal: 59
+                  protein: 10
+                  carbs: 3.2
+                  fat: 1.5
+      responses:
+        '201':
+          description: Product created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+              example:
+                id: 1
+                barcode: '12345678'
+                name: Greek Yogurt
+                brand: Farm Fresh
+                kcal: 59
+                protein: 10
+                carbs: 3.2
+                fat: 1.5
+                createdBy: 1
+                createdAt: '2025-01-01T12:00:00.000Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/ProductExists'
+
+  /products/{barcode}:
+    get:
+      summary: Fetch a product by barcode
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: barcode
+          required: true
+          schema:
+            type: string
+            pattern: '^\d{8,14}$'
+      responses:
+        '200':
+          description: Product record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    HealthStatus:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          example: ok
+    User:
+      type: object
+      required: [id, email, createdAt]
+      properties:
+        id:
+          type: integer
+          example: 1
+        email:
+          type: string
+          format: email
+        createdAt:
+          type: string
+          format: date-time
+    AuthResponse:
+      type: object
+      required: [token, user]
+      properties:
+        token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOjF9.signature
+        user:
+          $ref: '#/components/schemas/UserSummary'
+    UserSummary:
+      type: object
+      required: [id, email]
+      properties:
+        id:
+          type: integer
+          example: 1
+        email:
+          type: string
+          format: email
+    Product:
+      type: object
+      required: [id, barcode, name, kcal, protein, carbs, fat, createdBy, createdAt]
+      properties:
+        id:
+          type: integer
+          example: 1
+        barcode:
+          type: string
+          pattern: '^\d{8,14}$'
+        name:
+          type: string
+          example: Greek Yogurt
+        brand:
+          type: string
+          nullable: true
+        kcal:
+          type: number
+          example: 59
+        protein:
+          type: number
+          example: 10
+        carbs:
+          type: number
+          example: 3.2
+        fat:
+          type: number
+          example: 1.5
+        createdBy:
+          type: integer
+          example: 1
+        createdAt:
+          type: string
+          format: date-time
+    ProductInput:
+      type: object
+      required: [barcode, name, kcal, protein, carbs, fat]
+      properties:
+        barcode:
+          type: string
+          pattern: '^\d{8,14}$'
+        name:
+          type: string
+        brand:
+          type: string
+          nullable: true
+        kcal:
+          type: number
+        protein:
+          type: number
+        carbs:
+          type: number
+        fat:
+          type: number
+    ProductList:
+      type: object
+      required: [items, total, limit, offset]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+    RegisterInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+  responses:
+    BadRequest:
+      description: Request validation failed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: A valid email is required
+    Unauthorized:
+      description: Authentication failed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Authentication required
+    NotFound:
+      description: Resource not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Product not found
+    UserExists:
+      description: User already exists.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: User already exists
+    ProductExists:
+      description: Product already exists.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Product with this barcode already exists
