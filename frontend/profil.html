@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Profil · Commit2Fit</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app" id="app">
+  <div class="brand">
+    <span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+    <span class="wm">Commit2Fit</span>
+    <span class="badge">Prototyp</span>
+  </div>
+  <main id="view" tabindex="-1">
+    <h1>Profil und Tagesziel</h1>
+    <section class="card tgt">
+      <p class="k">Konto</p>
+      <dl>
+        <dt>Angemeldet als</dt><dd id="acctMail"></dd>
+        <dt>Backend</dt><dd class="mono" id="connUrl"></dd>
+        <dt>Verbindung</dt><dd id="connState"></dd>
+      </dl>
+      <button class="btn" id="logoutBtn">Abmelden</button>
+    </section>
+    <section class="card form" style="margin-top:14px">
+      <div class="grid2">
+        <label class="fld">Geschlecht
+          <select class="in" data-pr="sex"><option value="m">Männlich</option><option value="w">Weiblich</option></select>
+        </label>
+        <label class="fld">Alter<input class="in" type="number" inputmode="numeric" min="12" max="100" data-pr="age"></label>
+        <label class="fld">Größe (cm)<input class="in" type="number" inputmode="numeric" min="120" max="230" data-pr="h"></label>
+        <label class="fld">Gewicht (kg)<input class="in" type="number" inputmode="decimal" min="35" max="250" data-pr="w"></label>
+      </div>
+      <label class="fld">Aktivität
+        <select class="in" data-pr="act">
+          <option value="0">Kaum Bewegung</option>
+          <option value="1">Leicht aktiv (1–3 Trainings pro Woche)</option>
+          <option value="2">Mäßig aktiv (3–5 Trainings pro Woche)</option>
+          <option value="3">Sehr aktiv (6–7 Trainings pro Woche)</option>
+        </select>
+      </label>
+      <label class="fld">Ziel
+        <select class="in" data-pr="goal"><option value="abnehmen">Abnehmen</option><option value="halten">Gewicht halten</option><option value="zunehmen">Zunehmen</option></select>
+      </label>
+    </section>
+    <section class="card tgt" style="margin-top:14px">
+      <p class="k">Tagesziel</p>
+      <p class="big"><span id="tgKcal"></span> <small>kcal</small></p>
+      <dl>
+        <dt>Grundumsatz</dt><dd class="mono" id="tgBmr"></dd>
+        <dt>Gesamtumsatz</dt><dd class="mono" id="tgTdee"></dd>
+        <dt>Eiweiß</dt><dd class="mono" id="tgP"></dd>
+        <dt>Kohlenhydrate</dt><dd class="mono" id="tgC"></dd>
+        <dt>Fett</dt><dd class="mono" id="tgF"></dd>
+      </dl>
+      <p class="sub">Berechnung nach Mifflin-St Jeor. Eine Warnung erscheint bei mehr als 115 % des Ziels und ab 18 Uhr bei weniger als 70 %. Die Schwellen sind ein Vorschlag und noch nicht mit dem PO abgestimmt.</p>
+    </section>
+    <p class="note">Profil, Tagebuch und Fasten-Timer liegen vorerst nur in diesem Browser (pro Konto). Das Löschen entfernt sie hier, Produkte und Konto im Backend bleiben bestehen.</p>
+    <div style="margin-top:10px"><button class="btn" id="resetBtn">Lokale Daten löschen</button></div>
+  </main>
+  <nav class="tabs" aria-label="Hauptnavigation">
+    <a class="tab" href="heute.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/></svg><span>Heute</span></a>
+    <a class="tab" href="produkte.html"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><span>Produkte</span></a>
+    <a class="tab" href="verlauf.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V11M12 20V4M19 20v-7"/></svg><span>Verlauf</span></a>
+    <a class="tab" href="fasten.html"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="7.5"/><path d="M12 9v4l2.5 2M9.5 3h5"/></svg><span>Fasten</span></a>
+    <a class="tab" href="profil.html" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4.5 20c.8-4 3.8-6 7.5-6s6.7 2 7.5 6"/></svg><span>Profil</span></a>
+  </nav>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<script src="js/util.js"></script>
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/data.js"></script>
+<script src="js/state.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/profil.js"></script>
+</body>
+</html>
