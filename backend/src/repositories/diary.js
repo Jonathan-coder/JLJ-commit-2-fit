@@ -6,6 +6,9 @@ import { pool } from "../db.js";
 
 export const MEALS = ["breakfast", "lunch", "dinner", "snack"];
 const DAY_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+// ISO 8601 date-time with time zone, e.g. 2026-11-10T07:30:00+01:00 or ...Z
+const TIMESTAMP_REGEX = /^(\d{4}-\d{2}-\d{2})T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/;
+const MAX_INT4 = 2147483647;
 
 // Start and end of a Vienna calendar day as timestamptz, so the index on
 // (user_id, consumed_at) can be used.
@@ -19,8 +22,22 @@ function badRequest(message) {
   return error;
 }
 
+// Date.parse() is lenient (it accepts 2026-02-30 and rolls it over to 2 March), but PostgreSQL rejects
+// such a date with an error that would end up as HTTP 500. So the date is checked with a round trip.
+function isRealDay(day) {
+  if (typeof day !== "string" || !DAY_REGEX.test(day)) return false;
+  const parsed = new Date(`${day}T00:00:00Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === day;
+}
+
+function isValidTimestamp(value) {
+  if (typeof value !== "string") return false;
+  const match = TIMESTAMP_REGEX.exec(value);
+  return match !== null && isRealDay(match[1]) && !Number.isNaN(Date.parse(value));
+}
+
 function assertDay(day, name = "date") {
-  if (typeof day !== "string" || !DAY_REGEX.test(day) || Number.isNaN(Date.parse(day))) {
+  if (!isRealDay(day)) {
     throw badRequest(`${name} must be a date in the format YYYY-MM-DD`);
   }
 }
@@ -65,7 +82,7 @@ function mapTotals(row, day) {
 
 /** Add an entry to the diary of a user. Returns the entry including calculated nutrients. */
 export async function addEntry(userId, { productId, amountG, meal = "snack", consumedAt } = {}) {
-  if (!Number.isInteger(productId) || productId <= 0) {
+  if (!Number.isInteger(productId) || productId <= 0 || productId > MAX_INT4) {
     throw badRequest("productId must be a positive integer");
   }
   if (typeof amountG !== "number" || !Number.isFinite(amountG) || amountG <= 0) {
@@ -74,8 +91,8 @@ export async function addEntry(userId, { productId, amountG, meal = "snack", con
   if (!MEALS.includes(meal)) {
     throw badRequest(`meal must be one of: ${MEALS.join(", ")}`);
   }
-  if (consumedAt !== undefined && Number.isNaN(Date.parse(consumedAt))) {
-    throw badRequest("consumedAt must be a valid date/time");
+  if (consumedAt !== undefined && !isValidTimestamp(consumedAt)) {
+    throw badRequest("consumedAt must be an ISO 8601 date/time with time zone, e.g. 2026-11-10T07:30:00+01:00");
   }
 
   const product = await pool.query("SELECT 1 FROM products WHERE id = $1", [productId]);
