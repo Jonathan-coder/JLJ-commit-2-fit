@@ -60,6 +60,40 @@ async function main() {
     );
   }
 
+  // T058: demo diary for the last 7 days (only if the demo user has no entries yet)
+  const existingEntries = await pool.query(
+    "SELECT COUNT(*)::int AS total FROM intake_logs WHERE user_id = $1",
+    [userId]
+  );
+
+  if (userId !== null && existingEntries.rows[0].total === 0) {
+    // [days ago, meal, time (Vienna), barcode, grams]
+    const diaryPlan = [];
+    for (let daysAgo = 0; daysAgo < 7; daysAgo += 1) {
+      const variant = daysAgo % 2 === 0;
+      diaryPlan.push(
+        [daysAgo, "breakfast", "07:30", "12345678", 150],
+        [daysAgo, "breakfast", "07:30", "56789012", 120],
+        [daysAgo, "lunch", "12:30", variant ? "45678901" : "01234567", 180],
+        [daysAgo, "lunch", "12:30", "34567890", variant ? 80 : 70],
+        [daysAgo, "dinner", "19:00", "78901234", 90],
+        [daysAgo, "dinner", "19:00", variant ? "90123456" : "89012345", 100],
+        [daysAgo, "snack", "16:00", "67890123", variant ? 30 : 20]
+      );
+    }
+
+    for (const [daysAgo, meal, time, barcode, grams] of diaryPlan) {
+      await pool.query(
+        `INSERT INTO intake_logs (user_id, product_id, amount_g, meal, consumed_at)
+         SELECT $1, p.id, $2, $3,
+                (((NOW() AT TIME ZONE 'Europe/Vienna')::date - $4::int) + $5::time) AT TIME ZONE 'Europe/Vienna'
+         FROM products p
+         WHERE p.barcode = $6`,
+        [userId, grams, meal, daysAgo, time, barcode]
+      );
+    }
+  }
+
   console.log("Seed data applied successfully.");
 }
 
