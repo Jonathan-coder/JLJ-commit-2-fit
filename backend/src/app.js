@@ -6,6 +6,8 @@ import swaggerUi from "swagger-ui-express";
 import YAML from "yaml";
 import authRoutes from "./routes/auth.js";
 import productRoutes from "./routes/products.js";
+import intakeRoutes from "./routes/intake.js";
+import diaryRoutes from "./routes/diary.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
@@ -24,6 +26,8 @@ app.get("/openapi.json", (_req, res) => {
 });
 app.use("/auth", authRoutes);
 app.use("/products", productRoutes);
+app.use("/intake", intakeRoutes);
+app.use("/diary", diaryRoutes);
 app.use((req, res) => {
   res.status(404).json({ error: "Not found" });
 });
