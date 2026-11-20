@@ -188,6 +188,8 @@ h2{font:700 16px var(--fd);margin:0}
 .fring{position:relative;width:min(240px,100%);aspect-ratio:1;margin:18px auto}
 .fring .mid b{font-size:32px}
 .times{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.times .fld{min-width:0}
+.times .in{width:100%;min-width:0}
 .tgt dl{display:grid;grid-template-columns:1fr auto;gap:6px 12px;margin:14px 0}
 .tgt dt{color:var(--ink2)}
 .tgt dd{margin:0;text-align:right}
@@ -204,3 +206,4 @@ a.link{text-decoration:none;display:inline-flex;align-items:center}
 .msg{overflow-wrap:anywhere}
 .tgt dd{overflow-wrap:anywhere}
 .tgt .btn{margin-top:4px}
+.manual-hint{margin:6px 0 0;font-size:13px;color:var(--ink2)}

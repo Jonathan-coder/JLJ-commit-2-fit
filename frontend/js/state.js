@@ -9,18 +9,21 @@
   var user = C2F.api.user();
   var KEY = 'commit2fit-v2-' + (user ? user.id : 'anon');
 
+  /* Ramadan-Vorgabe (T077): Ramadan 2027, voraussichtlich 8.2. bis 9.3.2027. Der genaue Beginn hängt
+     von der Mondsichtung ab, deshalb kann man die Daten auf der Seite Fasten ändern. */
   var DEF = function () {
     return {
       profile: { sex: 'm', age: 22, h: 180, w: 75, act: 1, goal: 'halten' },
       favs: [],   /* Produkte (Kopie der API-Daten) */
-      fast: { model: '16:8', startTs: null, from: '05:30', to: '18:00' },
+      fast: { model: '16:8', startTs: null, from: '05:30', to: '18:00', startDate: '2027-02-08', endDate: '2027-03-09' },
       ue: []      /* Tagebuch: { id, d: 'JJJJ-MM-TT', m: Mahlzeit 0-3, g: Gramm, snap: Produkt } */
     };
   };
   function load() {
     try {
       var j = JSON.parse(localStorage.getItem(KEY) || 'null');
-      if (j && j.profile && j.fast) return Object.assign(DEF(), j);
+      /* fast einzeln ergänzen: ältere Stände haben noch kein startDate/endDate (T077) */
+      if (j && j.profile && j.fast) { var d = DEF(); j.fast = Object.assign(d.fast, j.fast); return Object.assign(d, j); }
     } catch (e) {}
     return DEF();
   }
