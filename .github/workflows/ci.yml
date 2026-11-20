@@ -56,3 +56,29 @@ jobs:
             sed -n '/start of coverage report/,/end of coverage report/p' test-output.txt | sed 's/^ℹ //'
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
+  # T083: unit tests for the public functions of the frontend scripts (no dependencies to install).
+  frontend-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run frontend tests with coverage
+        run: |
+          npm run test:coverage | tee test-output.txt
+          {
+            echo '## Frontend test coverage'
+            echo '```'
+            sed -n '/start of coverage report/,/end of coverage report/p' test-output.txt | sed 's/^ℹ //'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
