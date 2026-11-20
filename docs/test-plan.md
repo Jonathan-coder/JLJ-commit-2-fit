@@ -25,9 +25,30 @@ Rules for the automated tests:
 cd backend
 npm run db:up        # PostgreSQL (also creates commit2fit_test)
 npm test             # applies migrations to the test DB, then runs all tests
+npm run test:coverage  # same, plus a coverage report (line / branch / function % per file)
 ```
 
-GitHub Actions (`.github/workflows/ci.yml`, T056) runs `npm ci` and `npm test` with a PostgreSQL service on every pull request and on pushes to `main`.
+GitHub Actions (`.github/workflows/ci.yml`, T056) runs `npm ci` and `npm run test:coverage` with a PostgreSQL service on every pull request and on pushes to `main`. The coverage table is shown on the summary page of each run.
+
+### Coverage (T081)
+
+Coverage is measured with Node's built-in test coverage (`--experimental-test-coverage`) for all files in `backend/src`, so no extra dependency is needed. Only files that the tests load are counted; the tests load `app.js` and therefore every route, middleware and repository. Only `index.js` (server start) is not loaded.
+
+Baseline on 20.11.2026 (38 tests):
+
+| | Lines | Branches | Functions |
+|---|---|---|---|
+| All files | 96.9 % | 83.3 % | 90.7 % |
+| Minimum (CI fails below) | 95 % | 80 % | 90 % |
+| Target (feedback 20.11.2026) | – | 100 % | 100 % |
+
+Rules from the feedback of 20.11.2026:
+
+- Every `if` is tested for both outcomes, true and false (branch coverage, T082).
+- Every public (exported) function has at least one test (function coverage, T083).
+- When coverage goes up, the minimum in `package.json` (`test:coverage`) is raised as well, so it cannot drop again.
+
+Files with missing branches at the baseline: `config.js` (10 %), `db.js` (33 %), `errorHandler.js` (40 %), `routes/auth.js` (80 %), `intake.js` (86 %), `middleware/auth.js` (86 %), `products.js` (88 %), `repositories/diary.js` (98 %). Functions without a test: in `app.js` and `db.js`.
 
 ## 3. Traceability: requirement → story → tests
 
