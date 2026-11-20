@@ -49,9 +49,11 @@ router.post(
   requireAuth,
   asyncHandler(async (req, res) => {
     const { barcode, name, brand, kcal, protein, carbs, fat } = req.body || {};
-    const normalizedBarcode = typeof barcode === "string" ? barcode.trim() : "";
+    // T078: the barcode is optional (manual entry without scanner). Missing, null or "" means "no barcode".
+    const normalizedBarcode = typeof barcode === "string" ? barcode.trim() : barcode;
+    const hasBarcode = normalizedBarcode !== undefined && normalizedBarcode !== null && normalizedBarcode !== "";
 
-    if (!isValidBarcode(normalizedBarcode)) {
+    if (hasBarcode && !isValidBarcode(normalizedBarcode)) {
       return res.status(400).json({ error: "Barcode must contain only digits and be 8-14 characters long" });
     }
 
@@ -68,7 +70,7 @@ router.post(
     }
 
     const product = await createProduct({
-      barcode: normalizedBarcode,
+      barcode: hasBarcode ? normalizedBarcode : null,
       name: productName,
       brand: typeof brand === "string" && brand.trim() ? brand.trim() : null,
       kcal,
