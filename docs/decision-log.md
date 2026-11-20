@@ -1,0 +1,36 @@
+# Decision log – Commit2Fit
+
+All project decisions in one place (T076, feedback 20.11.2026). The same list is the *Decisions* sheet of the PM tool.
+New decisions get the next ID; if a decision is changed later, the new entry refers to the old ID.
+Empty date (–): the source only names the sprint, not the day.
+
+| ID | Date | Sprint | Decision | Reason | Alternatives considered | Decided by | Source | Related |
+|---|---|---|---|---|---|---|---|---|
+| D01 | 15.09.2026 | Backlog | Project topic: calorie tracker "Commit2Fit" | Topic selection at the kick-off | not documented | Whole team | Meetings: Kick-off 15.09. | – |
+| D02 | 15.09.2026 | Backlog | Project management in one shared Excel workbook on OneDrive (board, requirements, backlog, tasks, sprints, meetings) | Kick-off requirement: one PM tool for board, requirements, sprints and effort; team and supervisor work in the same file | not documented | Whole team | Meetings: Kick-off 15.09. | US01, T002 |
+| D03 | 30.09.2026 | Sprint 1 | The app is web-based and runs responsively in the mobile browser (no native app) | PO answer in Q&A class 2; no operating-system constraint | Native app for Android and/or iOS | PO | Requirements C03, C02 | C03, US18 |
+| D04 | 30.09.2026 | Sprint 1 | Products may be entered manually and taken from external food databases (e.g. Open Food Facts) | PO answer in Q&A class 2 | Only own scanning / OCR | PO | Requirements F02, F09, F10 | F09, F10, US16 |
+| D05 | 30.09.2026 | Sprint 1 | Users have an account; several devices can use the same account | PO answer in Q&A class 2 | Data only on one device | PO | Requirements F11 | F11, US06 |
+| D06 | 30.09.2026 | Sprint 1 | Sprint 1 roles: all Requirements Engineers; Josuah Scrum Master, Jonathan Repository Manager, Leopold Repository Manager Assistant | Role assignment at Sprint 1 planning | – | Whole team | Meetings: Sprint Planning 30.09. | Team sheet |
+| D07 | 09.10.2026 | Sprint 1 | Backend in JavaScript (Node.js, Express) with a PostgreSQL database | Tech-stack evaluation T004 | not documented | Whole team | Meetings: Team Meeting 09.10.; T004 | T004, US14 |
+| D08 | 09.10.2026 | Sprint 1 | Sprint 2 roles: Josuah Scrum Master, Jonathan Backend Developer, Leopold Frontend Developer | Role assignment for Sprint 2 | – | Whole team | Meetings: Team Meeting 09.10., Sprint Planning 14.10. | Team sheet |
+| D09 | 14.10.2026 | Sprint 2 | Clear roles per sprint; log actual hours in the PM tool regularly | Retrospective Sprint 1 | – | Whole team | Meetings: Retrospective 14.10. | Team, Tasks sheet |
+| D10 | 14.10.2026 | Sprint 2 | Login with bcrypt password hashes and JWT tokens (one token per device) | REST API without server sessions; one account on several devices (F11) | Server-side sessions | Jonathan | T012, T013 | F11, US06 |
+| D11 | 14.10.2026 | Sprint 2 | Barcode is UNIQUE in the database; a duplicate answers HTTP 409 | No duplicate products in the shared database (F03), also with parallel requests | Duplicate check only in the app | Jonathan | T014, Requirements F03 | F03, US05 |
+| D12 | 14.10.2026 | Sprint 2 | REST API is documented with OpenAPI / Swagger UI (/api-docs) | Frontend can use the API without reading backend code (C02, US15) | – | Jonathan | T018 | C02, US15 |
+| D13 | 21.10.2026 | Sprint 2 | Scan flow (US04) is planned for Sprint 3 | PO status meeting | – | Team with PO | Meetings: PO Status Meeting 21.10. | US04 |
+| D14 | – | Sprint 2 | 2-3 concurrent users are enough for the app; an external server may need more (up to 800) | PO answer to NF03 | Load test with many users | PO | Requirements NF03 (notes) | NF03, US12, T072 |
+| D15 | 27.10.2026 | Sprint 2 | Plan sprints within capacity (load max. 100 %); simplify the PM tool (remove done date and burndown) | Sprint 2 was overplanned (load well above 100 %) | – | Whole team | Meetings: Retrospective 27.10., Team Meeting 27.10. | T045, Sprints sheet |
+| D16 | 27.10.2026 | Sprint 3 | Sprint 3 roles: Josuah Scrum Master + Database Engineer, Jonathan Test Engineer + Backend Developer, Leopold Integration + Frontend Developer | Role assignment for Sprint 3 (min. 2 roles per person) | – | Whole team | Meetings: Team Meeting 27.10. | Team sheet |
+| D17 | – | Sprint 3 | Diary: nutrition values per 100 g on the product; kcal/macros of an entry are calculated in a database view, not stored; a day = calendar day in Europe/Vienna; meal stored per entry | Diary stays correct when a product is corrected; day queries can use the index (user_id, consumed_at) | Store calculated values per entry | Josuah | docs/architecture.md (T049) | US17, T049, T050, T057 |
+| D18 | – | Sprint 3 | Frontend uses the backend data model: values per 100 g, amounts in grams only | Same values in frontend and backend | Portions | Leopold | T068 | F04, US08 |
+| D19 | – | Sprint 3 | Frontend and backend in one repository | One pull request and one CI for the whole app | Separate repositories | Leopold | T070 | US01 |
+| D20 | – | Sprint 3 | Camera scan is simulated until the camera is connected; the barcode lookup in the backend is real | Scan flow can be shown and tested without camera access | Wait for camera integration | Leopold | T031 | F02, US04 |
+| D21 | 20.11.2026 | Sprint 4 | Keep a decision log (this list) | Feedback 20.11.2026 | Decisions only in the Meetings sheet | Whole team | Meetings: PO Status Meeting 20.11. | T076 |
+| D22 | 20.11.2026 | Sprint 4 | Products can be saved without barcode (barcode optional, still unique when set) | Feedback: enter products without scanner; loose fruit or home-made food has no barcode | Barcode stays required | Jonathan | Feedback 20.11.2026 | F09, US21, T078 |
+| D23 | 20.11.2026 | Sprint 4 | Ramadan mode with first and last day; default Ramadan 2027 (expected 8.2.-9.3.2027), editable on the page; timer stays in the browser | Feedback; the exact start depends on the moon sighting | Fixed dates in the code | Jonathan | Feedback 20.11.2026 | F07, US11, T077 |
+| D24 | 20.11.2026 | Sprint 4 | All SQL queries are in the database access layer (backend/src/repositories); routes and middleware contain no SQL | Feedback; HTTP handling and data access are separated and can be tested separately | SQL in the routes (before), ORM | Jonathan | Feedback 20.11.2026 | US14, T079 |
+| D25 | 20.11.2026 | Sprint 4 | Test coverage with Node's built-in coverage; minimum 100 % lines, branches and functions in backend and frontend, CI fails below | Feedback: test true and false of every if and every public function | Separate coverage tool (c8), lower minimum | Jonathan | Feedback 20.11.2026 | US20, T081, T082, T083 |
+| D26 | 20.11.2026 | Sprint 4 | Branches that can never be reached are removed instead of tested | Dead code would only be covered by fake tests | Keep the code and mock around it | Jonathan | T082 | US20 |
+| D27 | 20.11.2026 | Sprint 4 | Frontend unit tests with node:test and small fakes for the browser APIs | No extra dependencies, fast in CI | Browser test library (jsdom, Playwright) | Jonathan | T083 | US20 |
+| D28 | 20.11.2026 | Sprint 4 | node_modules is not committed; npm ci installs the dependencies | Feedback; keeps the repository small | – | Jonathan | Feedback 20.11.2026 | T084 |
