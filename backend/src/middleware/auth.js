@@ -15,11 +15,8 @@ export const requireAuth = asyncHandler(async (req, res, next) => {
     return res.status(401).json({ error: "Authentication required" });
   }
 
+  // Node trims trailing spaces of header values, so "Bearer " always carries a token here.
   const token = header.slice(7).trim();
-
-  if (!token) {
-    return res.status(401).json({ error: "Authentication required" });
-  }
 
   let decoded;
   try {

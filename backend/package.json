@@ -12,7 +12,7 @@
     "seed": "node scripts/seed.js",
     "test:migrate": "cross-env NODE_ENV=test node-pg-migrate --envPath .env --database-url-var TEST_DATABASE_URL up --migrations-dir ./migrations --migrations-table migrations",
     "test": "npm run test:migrate && cross-env NODE_ENV=test node --test --test-concurrency=1 tests/*.test.js",
-    "test:coverage": "npm run test:migrate && cross-env NODE_ENV=test node --test --test-concurrency=1 --experimental-test-coverage --test-coverage-include=src/** --test-coverage-lines=95 --test-coverage-branches=80 --test-coverage-functions=90 tests/*.test.js"
+    "test:coverage": "npm run test:migrate && cross-env NODE_ENV=test node --test --test-concurrency=1 --experimental-test-coverage --test-coverage-include=src/** --test-coverage-lines=100 --test-coverage-branches=100 --test-coverage-functions=100 tests/*.test.js"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",

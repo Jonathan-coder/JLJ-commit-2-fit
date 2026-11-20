@@ -47,8 +47,8 @@ function toNumber(value) {
   return value === null || value === undefined ? 0 : Number(value);
 }
 
+// pg returns DATE columns as Date objects (local midnight).
 function formatDay(value) {
-  if (typeof value === "string") return value.slice(0, 10);
   const pad = (n) => String(n).padStart(2, "0");
   return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`;
 }

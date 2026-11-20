@@ -48,7 +48,7 @@ router.post(
   "/",
   requireAuth,
   asyncHandler(async (req, res) => {
-    const { barcode, name, brand, kcal, protein, carbs, fat } = req.body || {};
+    const { barcode, name, brand, kcal, protein, carbs, fat } = req.body;
     // T078: the barcode is optional (manual entry without scanner). Missing, null or "" means "no barcode".
     const normalizedBarcode = typeof barcode === "string" ? barcode.trim() : barcode;
     const hasBarcode = normalizedBarcode !== undefined && normalizedBarcode !== null && normalizedBarcode !== "";

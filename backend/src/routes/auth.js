@@ -14,7 +14,7 @@ function normalizeEmail(value) {
 }
 
 function readPassword(body) {
-  return typeof body?.password === "string" ? body.password : "";
+  return typeof body.password === "string" ? body.password : "";
 }
 
 function session(user) {
@@ -28,7 +28,7 @@ function session(user) {
 router.post(
   "/register",
   asyncHandler(async (req, res) => {
-    const email = normalizeEmail(req.body?.email);
+    const email = normalizeEmail(req.body.email);
     const password = readPassword(req.body);
 
     if (!EMAIL_REGEX.test(email)) {
@@ -52,7 +52,7 @@ router.post(
 router.post(
   "/login",
   asyncHandler(async (req, res) => {
-    const email = normalizeEmail(req.body?.email);
+    const email = normalizeEmail(req.body.email);
     const password = readPassword(req.body);
 
     const user = await findUserWithPasswordByEmail(email);
