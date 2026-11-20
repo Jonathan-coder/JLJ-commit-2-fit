@@ -11,7 +11,7 @@ router.post(
   "/",
   requireAuth,
   asyncHandler(async (req, res) => {
-    const { productId, amountG, meal, consumedAt } = req.body || {};
+    const { productId, amountG, meal, consumedAt } = req.body;
     const entry = await addEntry(req.userId, { productId, amountG, meal, consumedAt });
     return res.status(201).json(entry);
   })

@@ -1,0 +1,9 @@
+{
+  "name": "commit2fit-frontend",
+  "private": true,
+  "description": "Unit tests for the public functions of the frontend scripts (no dependencies needed).",
+  "scripts": {
+    "test": "node --test tests/*.test.cjs",
+    "test:coverage": "node --test --experimental-test-coverage --test-coverage-include=js/** --test-coverage-lines=100 --test-coverage-branches=100 --test-coverage-functions=100 tests/*.test.cjs"
+  }
+}

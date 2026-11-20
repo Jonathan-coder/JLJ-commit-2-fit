@@ -68,6 +68,19 @@ flowchart TD
 - **Sprint 2 scope:** Auth, Product API, DB schema (`users`, `products`) and the OpenAPI docs.
 - **Sprint 3 scope (database):** meal per diary entry, diary views and queries, product source for Open Food Facts (blue in the diagram).
 
+## Backend layers (T079)
+
+| Layer | Folder | Job | Knows SQL? |
+|---|---|---|---|
+| Routes | `backend/src/routes/` | HTTP: read and validate the request, choose the status code, send JSON | no |
+| Middleware | `backend/src/middleware/` | JWT check (`requireAuth`), central error handling | no |
+| Database access layer | `backend/src/repositories/` | All SQL queries; returns plain JavaScript objects (camelCase) | yes |
+| Database connection | `backend/src/db.js` | Connection pool; `resetTables()` for tests only | – |
+
+Repositories: `users.js` (find by id / e-mail, create), `products.js` (search with paging, find by barcode, exists, create – duplicate barcode → error with status 409), `diary.js` (intake entries, day totals, ranges, delete).
+
+Rule: **routes and middleware never call `pool.query`**. A new query is added as a function in the matching repository and gets a test.
+
 ## Data model (status Sprint 3)
 
 | Table / view | Columns | Notes |

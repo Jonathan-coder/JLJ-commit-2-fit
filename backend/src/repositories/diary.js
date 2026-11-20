@@ -3,6 +3,7 @@
 // daily_intake_totals (migration 1794336100000) calculate the intake per entry and per day.
 // A "day" is a calendar day in Europe/Vienna.
 import { pool } from "../db.js";
+import { productExists } from "./products.js";
 
 export const MEALS = ["breakfast", "lunch", "dinner", "snack"];
 const DAY_REGEX = /^\d{4}-\d{2}-\d{2}$/;
@@ -46,8 +47,8 @@ function toNumber(value) {
   return value === null || value === undefined ? 0 : Number(value);
 }
 
+// pg returns DATE columns as Date objects (local midnight).
 function formatDay(value) {
-  if (typeof value === "string") return value.slice(0, 10);
   const pad = (n) => String(n).padStart(2, "0");
   return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`;
 }
@@ -95,8 +96,7 @@ export async function addEntry(userId, { productId, amountG, meal = "snack", con
     throw badRequest("consumedAt must be an ISO 8601 date/time with time zone, e.g. 2026-11-10T07:30:00+01:00");
   }
 
-  const product = await pool.query("SELECT 1 FROM products WHERE id = $1", [productId]);
-  if (product.rows.length === 0) {
+  if (!(await productExists(productId))) {
     const error = new Error("Product not found");
     error.statusCode = 404;
     throw error;

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import supertest from "supertest";
 import app from "../src/app.js";
 import { pool, resetTables } from "../src/db.js";
+import { createProduct } from "../src/repositories/products.js";
 
 const request = supertest(app);
 
@@ -180,4 +181,88 @@ test("GET /products/:barcode returns a product, 404 for missing and 400 for inva
     .get("/products/not-a-barcode")
     .set("Authorization", `Bearer ${token}`);
   assert.equal(invalid.status, 400);
+});
+
+// T078: products can be entered without the scanner, the barcode is optional
+test("POST /products saves products without barcode (missing, null, empty or blank)", async () => {
+  const token = await createUserAndToken();
+  const withoutBarcode = productInput({ name: "Apple" });
+  delete withoutBarcode.barcode;
+
+  const inputs = [
+    withoutBarcode,
+    productInput({ name: "Pear", barcode: null }),
+    productInput({ name: "Plum", barcode: "" }),
+    productInput({ name: "Home-made soup", barcode: "   " }),
+  ];
+  for (const input of inputs) {
+    const response = await request.post("/products").set("Authorization", `Bearer ${token}`).send(input);
+    assert.equal(response.status, 201, JSON.stringify(input));
+    assert.equal(response.body.barcode, null);
+  }
+
+  // several products without barcode are allowed (UNIQUE ignores NULL)
+  const stored = await pool.query("SELECT COUNT(*)::int AS total FROM products WHERE barcode IS NULL");
+  assert.equal(stored.rows[0].total, 4);
+});
+
+test("POST /products rejects a missing or non-string product name", async () => {
+  const token = await createUserAndToken();
+  const missingName = productInput();
+  delete missingName.name;
+  for (const input of [missingName, productInput({ name: 42 }), productInput({ name: "   " })]) {
+    const response = await request.post("/products").set("Authorization", `Bearer ${token}`).send(input);
+    assert.equal(response.status, 400, JSON.stringify(input));
+    assert.equal(response.body.error, "Product name is required");
+  }
+});
+
+test("POST /products rejects a barcode that is not a string of 8-14 digits", async () => {
+  const token = await createUserAndToken();
+  for (const barcode of [12345678, "1234567", "123456789012345", "1234abcd"]) {
+    const response = await request
+      .post("/products")
+      .set("Authorization", `Bearer ${token}`)
+      .send(productInput({ barcode }));
+    assert.equal(response.status, 400, String(barcode));
+    assert.equal(response.body.error, "Barcode must contain only digits and be 8-14 characters long");
+  }
+});
+
+test("POST /products trims the brand and stores a missing or blank brand as null", async () => {
+  const token = await createUserAndToken();
+  const noBrand = productInput({ barcode: "11111111" });
+  delete noBrand.brand;
+  const cases = [
+    [productInput({ barcode: "22222222", brand: "  Farm Fresh  " }), "Farm Fresh"],
+    [productInput({ barcode: "33333333", brand: "   " }), null],
+    [productInput({ barcode: "44444444", brand: 42 }), null],
+    [noBrand, null],
+  ];
+  for (const [input, expected] of cases) {
+    const response = await request.post("/products").set("Authorization", `Bearer ${token}`).send(input);
+    assert.equal(response.status, 201);
+    assert.equal(response.body.brand, expected);
+  }
+});
+
+test("GET /products uses default paging for missing or invalid limit and offset", async () => {
+  const token = await createUserAndToken();
+  const response = await request
+    .get("/products?limit=abc&offset=-5&search=%20%20")
+    .set("Authorization", `Bearer ${token}`);
+  assert.equal(response.status, 200);
+  assert.equal(response.body.limit, 20);
+  assert.equal(response.body.offset, 0);
+
+  const capped = await request.get("/products?limit=1000").set("Authorization", `Bearer ${token}`);
+  assert.equal(capped.body.limit, 100);
+});
+
+test("createProduct (repository) passes database errors other than a duplicate on", async () => {
+  // A negative value violates the CHECK constraint (23514), which is not turned into 409.
+  await assert.rejects(
+    createProduct({ barcode: null, name: "Broken", brand: null, kcal: -1, protein: 0, carbs: 0, fat: 0, createdBy: null }),
+    (error) => error.code === "23514" && error.statusCode === undefined
+  );
 });

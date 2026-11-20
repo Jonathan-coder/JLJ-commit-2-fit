@@ -291,3 +291,19 @@ test("GET /diary/totals returns 400 for missing, invalid or reversed periods", a
     assert.equal(response.status, 400, JSON.stringify(query));
   }
 });
+
+// T082: GET /intake without ?date= uses today (Vienna)
+test("GET /intake without date lists the entries of today", async () => {
+  const token = await registerUser("today@commit2fit.test");
+  const productId = await createProduct(token);
+  const created = await logEntry(token, { productId, amountG: 150 });
+  assert.equal(created.status, 201);
+
+  const response = await request.get("/intake").set(auth(token));
+  assert.equal(response.status, 200);
+  assert.equal(response.body.date, todayInVienna());
+  assert.deepEqual(
+    response.body.items.map((item) => item.id),
+    [created.body.id]
+  );
+});

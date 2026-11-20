@@ -138,3 +138,60 @@ test("two logins for one account issue distinct tokens that both remain valid", 
     assert.equal(response.body.email, "multi-device@commit2fit.test");
   }
 });
+
+// T082: both outcomes of every if in routes/auth.js and middleware/auth.js
+test("register and login treat a non-string e-mail or password as missing", async () => {
+  const numberEmail = await request.post("/auth/register").send({ email: 12345, password: "Password123!" });
+  assert.equal(numberEmail.status, 400);
+  assert.equal(numberEmail.body.error, "A valid email is required");
+
+  const numberPassword = await request
+    .post("/auth/register")
+    .send({ email: "types@commit2fit.test", password: 12345678 });
+  assert.equal(numberPassword.status, 400);
+  assert.equal(numberPassword.body.error, "Password must be at least 8 characters long");
+
+  const emptyBody = await request.post("/auth/login").send({});
+  assert.equal(emptyBody.status, 401);
+});
+
+test("login with an unknown e-mail and with a wrong password both answer 401", async () => {
+  await request.post("/auth/register").send({ email: "known@commit2fit.test", password: "Password123!" });
+
+  const unknown = await request.post("/auth/login").send({ email: "unknown@commit2fit.test", password: "Password123!" });
+  const wrongPassword = await request.post("/auth/login").send({ email: "known@commit2fit.test", password: "Wrong1234!" });
+
+  for (const response of [unknown, wrongPassword]) {
+    assert.equal(response.status, 401);
+    assert.equal(response.body.error, "Invalid email or password");
+  }
+});
+
+test("requireAuth rejects a Bearer header without token (Node trims it to \"Bearer\") and a different scheme", async () => {
+  const emptyToken = await request.get("/auth/me").set("Authorization", "Bearer    ");
+  assert.equal(emptyToken.status, 401);
+  assert.equal(emptyToken.body.error, "Authentication required");
+
+  const basic = await request.get("/auth/me").set("Authorization", "Basic abc");
+  assert.equal(basic.status, 401);
+  assert.equal(basic.body.error, "Authentication required");
+});
+
+test("requireAuth rejects a valid token of a user that no longer exists", async () => {
+  const registered = await request.post("/auth/register").send({ email: "gone@commit2fit.test", password: "Password123!" });
+  await pool.query("DELETE FROM users WHERE id = $1", [registered.body.user.id]);
+
+  const response = await request.get("/auth/me").set("Authorization", `Bearer ${registered.body.token}`);
+  assert.equal(response.status, 401);
+  assert.equal(response.body.error, "Authentication failed");
+});
+
+test("GET /auth/me returns id, e-mail and creation date of the logged-in user", async () => {
+  const registered = await request.post("/auth/register").send({ email: "me@commit2fit.test", password: "Password123!" });
+  const response = await request.get("/auth/me").set("Authorization", `Bearer ${registered.body.token}`);
+  assert.equal(response.status, 200);
+  assert.equal(response.body.id, registered.body.user.id);
+  assert.equal(response.body.email, "me@commit2fit.test");
+  assert.ok(!Number.isNaN(Date.parse(response.body.createdAt)));
+  assert.equal("passwordHash" in response.body, false);
+});

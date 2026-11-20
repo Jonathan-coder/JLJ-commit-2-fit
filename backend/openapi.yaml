@@ -168,6 +168,14 @@ paths:
                   protein: 10
                   carbs: 3.2
                   fat: 1.5
+              withoutBarcode:
+                summary: Manual entry without barcode (T078)
+                value:
+                  name: Apple
+                  kcal: 52
+                  protein: 0.3
+                  carbs: 14
+                  fat: 0.2
       responses:
         '201':
           description: Product created
@@ -415,6 +423,8 @@ components:
         barcode:
           type: string
           pattern: '^\d{8,14}$'
+          nullable: true
+          description: null for products entered without barcode (T078)
         name:
           type: string
           example: Greek Yogurt
@@ -441,11 +451,13 @@ components:
           format: date-time
     ProductInput:
       type: object
-      required: [barcode, name, kcal, protein, carbs, fat]
+      required: [name, kcal, protein, carbs, fat]
       properties:
         barcode:
           type: string
-          pattern: '^\d{8,14}$'
+          pattern: '^(\d{8,14})?$'
+          nullable: true
+          description: Optional (T078). Missing, null or an empty string saves the product without barcode.
         name:
           type: string
         brand:

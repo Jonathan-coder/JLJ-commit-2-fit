@@ -111,7 +111,7 @@
   C2F.mapProduct = function (p) {
     return {
       id: p.id,
-      bc: p.barcode,
+      bc: p.barcode || '',
       name: p.name,
       brand: p.brand || '',
       k: Number(p.kcal),

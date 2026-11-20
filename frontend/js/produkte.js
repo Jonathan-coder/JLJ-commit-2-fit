@@ -1,4 +1,5 @@
-/* produkte.js – Seite "Produkte" (produkte.html): Suche (F01), Produkt-Sheet, Scan-Ablauf (F02, F03).
+/* produkte.js – Seite "Produkte" (produkte.html): Suche (F01), Produkt-Sheet, Scan-Ablauf (F02, F03),
+   manuelle Eingabe ohne Scanner (F09, T078).
    Produkte kommen aus dem Backend (GET /products, GET /products/:barcode, POST /products). */
 (function () {
   'use strict';
@@ -57,7 +58,8 @@
       (isFav(p.id) ? '<span class="st" aria-label="Favorit">' + I.star(true) + '</span>' : '') +
       '<span class="kc">' + fmt(p.k) + ' kcal<br><small>pro 100 g</small></span></button></li>';
   }
-  var SCAN_BTN = '<button class="btn primary" data-act="scan">' + I.SCAN + 'Produkt scannen</button>';
+  var SCAN_BTN = '<div class="acts"><button class="btn primary" data-act="scan">' + I.SCAN + 'Produkt scannen</button>' +
+    '<button class="btn" data-act="manual">Manuell eintragen</button></div>';
 
   function draw() {
     var el = $('#results'), count = $('#count'), items, h = '';
@@ -76,7 +78,7 @@
         return;
       }
       if (!items.length) {
-        el.innerHTML = '<li><p class="empty" style="margin-top:18px">' + (q.trim() ? 'Nichts gefunden. Scanne das Produkt, dann steht es für alle Nutzer in der zentralen Datenbank.' : 'Es sind noch keine Produkte in der Datenbank. Scanne das erste Produkt.') + '</p>' + SCAN_BTN + '</li>';
+        el.innerHTML = '<li><p class="empty" style="margin-top:18px">' + (q.trim() ? 'Nichts gefunden. Scanne das Produkt oder trag es manuell ein, dann steht es für alle Nutzer in der zentralen Datenbank.' : 'Es sind noch keine Produkte in der Datenbank. Scanne das erste Produkt oder trag es manuell ein.') + '</p>' + SCAN_BTN + '</li>';
         count.textContent = '';
         return;
       }
@@ -136,7 +138,7 @@
     var amt = '<label class="fld">Menge in Gramm<input class="in" id="pv" type="number" inputmode="decimal" min="1" step="5" value="' + esc(cur.val) + '"></label>' +
       '<div class="chips" style="margin:0">' + [50, 100, 150, 200].map(function (v) { return '<button class="chip" data-act="qg" data-v="' + v + '">' + v + ' g</button>'; }).join('') + '</div>' +
       '<label class="fld">Mahlzeit<select class="in" id="pm">' + MEALS.map(function (m, i) { return '<option value="' + i + '"' + (cur.meal === i ? ' selected' : '') + '>' + m + '</option>'; }).join('') + '</select></label>';
-    return '<div class="sh-head"><div><h2 id="sheetTitle">' + esc(p.name) + '</h2><p class="sub">' + esc(p.brand || 'ohne Marke') + ' · <span class="mono">' + esc(p.bc) + '</span></p></div><button class="icon-btn" data-act="close" aria-label="Schließen">' + I.X + '</button></div>' +
+    return '<div class="sh-head"><div><h2 id="sheetTitle">' + esc(p.name) + '</h2><p class="sub">' + esc(p.brand || 'ohne Marke') + ' · ' + (p.bc ? '<span class="mono">' + esc(p.bc) + '</span>' : 'ohne Barcode') + '</p></div><button class="icon-btn" data-act="close" aria-label="Schließen">' + I.X + '</button></div>' +
       '<div class="label"><h3>Nährwerte <span>pro 100 g</span></h3>' +
       '<div class="lr first"><span>Energie</span><span class="mono">' + fmt(p.k) + ' kcal</span></div>' +
       '<div class="lr"><span>Fett</span><span class="mono">' + fmt(p.f, 1) + ' g</span></div>' +
@@ -153,7 +155,7 @@
     }).join('') + '</ol>';
   }
   function scanHTML() {
-    var head = '<div class="sh-head"><h2 id="sheetTitle">Produkt scannen</h2><button class="icon-btn" data-act="close" aria-label="Schließen">' + I.X + '</button></div>' + stepper(sc.step);
+    var head = '<div class="sh-head"><h2 id="sheetTitle">' + (sc.manual ? 'Produkt manuell eintragen' : 'Produkt scannen') + '</h2><button class="icon-btn" data-act="close" aria-label="Schließen">' + I.X + '</button></div>' + (sc.manual ? '' : stepper(sc.step));
     var proto = '<p class="sub" style="margin-top:12px">Die Kamera ist noch nicht angebunden. "Scan" liefert Demo-Barcodes, die Suche im Backend ist echt.</p>';
     var corners = '<i class="cn tl"></i><i class="cn tr"></i><i class="cn bl"></i><i class="cn br"></i>';
     if (sc.step === 1) {
@@ -173,12 +175,13 @@
       return '<label class="fld' + (sc.flag === key ? ' flag' : '') + '">' + label + '<input class="in mono" data-sf="' + key + '" inputmode="decimal" value="' + esc(v[key]) + '">' +
         (sc.flag === key ? '<span class="hint">Unsicher erkannt, bitte prüfen</span>' : '') + '</label>';
     }
-    return head + '<p class="sub" style="margin:0 0 12px">Prüfe die erkannten Werte (pro 100 g) und ergänze den Namen.</p><div class="form">' +
+    var intro = sc.manual ? 'Trag die Nährwerte pro 100 g von der Verpackung ein. Der Barcode ist optional, z. B. für Obst oder Selbstgekochtes.' : 'Prüfe die erkannten Werte (pro 100 g) und ergänze den Namen.';
+    return head + '<p class="sub" style="margin:0 0 12px">' + intro + '</p><div class="form">' +
       '<label class="fld">Produktname<input class="in" data-sf="name" value="' + esc(v.name) + '" placeholder="z. B. Dinkel-Müsli" autocomplete="off"></label>' +
-      '<div class="grid2"><label class="fld">Marke<input class="in" data-sf="brand" value="' + esc(v.brand) + '" autocomplete="off"></label><label class="fld">Barcode<input class="in mono" data-sf="bc" inputmode="numeric" maxlength="14" value="' + esc(v.bc) + '"></label></div>' +
+      '<div class="grid2"><label class="fld">Marke<input class="in" data-sf="brand" value="' + esc(v.brand) + '" autocomplete="off"></label><label class="fld">Barcode (optional)<input class="in mono" data-sf="bc" inputmode="numeric" maxlength="14" value="' + esc(v.bc) + '"></label></div>' +
       '<div class="grid2">' + f('k', 'Energie (kcal)') + f('f', 'Fett (g)') + f('c', 'Kohlenhydrate (g)') + f('p', 'Eiweiß (g)') + '</div></div>' +
       '<p class="msg" id="scMsg" role="alert"></p>' +
-      '<div class="acts" style="margin-top:6px"><button class="btn" data-act="rescan">Neu scannen</button><button class="btn primary" data-act="savep">In Datenbank speichern</button></div>';
+      '<div class="acts" style="margin-top:6px">' + (sc.manual ? '<button class="btn" data-act="close">Abbrechen</button>' : '<button class="btn" data-act="rescan">Neu scannen</button>') + '<button class="btn primary" data-act="savep">In Datenbank speichern</button></div>';
   }
   function scMsg(t) { var m = $('#scMsg'); if (m) m.textContent = t; }
   function setBusy(on, msg) {
@@ -208,6 +211,11 @@
   /* ---------- Aktionen ---------- */
   var ACTIONS = {
     scan: function () { sc = { step: 1, bc: '', vals: {}, flag: null, busy: false }; showSheet(scanHTML()); },
+    /* T078: Produkt ohne Scanner eintragen – direkt das Formular, Name aus der Suche vorbelegt */
+    manual: function () {
+      sc = { step: 3, manual: true, bc: '', vals: { name: q.trim(), brand: '', bc: '', k: '', f: '', c: '', p: '' }, flag: null, busy: false };
+      showSheet(scanHTML());
+    },
     open: function (t) {
       var id = Number(t.dataset.id);
       var p = list.items.concat(S.favs, recent()).filter(function (x) { return x.id === id; })[0];
@@ -253,11 +261,12 @@
       var v = sc.vals, P = function (k) { return parseFloat(String(v[k]).replace(',', '.')); }, name = (v.name || '').trim();
       if (!name) return scMsg('Bitte einen Produktnamen eingeben.');
       var bc = (v.bc || '').replace(/\s+/g, '');
-      if (!BARCODE.test(bc)) return scMsg('Der Barcode muss aus 8 bis 14 Ziffern bestehen.');
+      if (bc && !BARCODE.test(bc)) return scMsg('Der Barcode muss aus 8 bis 14 Ziffern bestehen (oder leer bleiben).');
       var labels = { k: 'Energie', f: 'Fett', c: 'Kohlenhydrate', p: 'Eiweiß' };
       for (var k in labels) { if (!isFinite(P(k)) || P(k) < 0) return scMsg('Bitte einen gültigen Wert für ' + labels[k] + ' eingeben.'); }
       if (P('f') + P('c') + P('p') > 100) return scMsg('Fett, Kohlenhydrate und Eiweiß ergeben zusammen mehr als 100 g pro 100 g. Bitte Werte prüfen.');
-      var body = { barcode: bc, name: name, kcal: P('k'), protein: P('p'), carbs: P('c'), fat: P('f') };
+      var body = { name: name, kcal: P('k'), protein: P('p'), carbs: P('c'), fat: P('f') };
+      if (bc) body.barcode = bc;
       var brand = (v.brand || '').trim();
       if (brand) body.brand = brand;
       setBusy(true, 'Wird gespeichert …');
@@ -268,7 +277,7 @@
         if (filt === 'all') load(true);
       }, function (err) {
         if (!sc) return;
-        if (err.status === 409) {
+        if (err.status === 409 && bc) {
           /* Jemand war schneller: das vorhandene Produkt öffnen statt ein Duplikat anzulegen */
           api.productByBarcode(bc).then(function (p) {
             if (!sc) return;
