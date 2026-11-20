@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
-import { pool } from "../db.js";
 import { config } from "../config.js";
+import { findUserById } from "../repositories/users.js";
 
 export function asyncHandler(handler) {
   return (req, res, next) => {
@@ -8,7 +8,7 @@ export function asyncHandler(handler) {
   };
 }
 
-export async function requireAuth(req, res, next) {
+export const requireAuth = asyncHandler(async (req, res, next) => {
   const header = req.headers.authorization;
 
   if (!header || !header.startsWith("Bearer ")) {
@@ -21,21 +21,20 @@ export async function requireAuth(req, res, next) {
     return res.status(401).json({ error: "Authentication required" });
   }
 
+  let decoded;
   try {
-    const decoded = jwt.verify(token, config.jwtSecret);
-    const result = await pool.query(
-      "SELECT id, email FROM users WHERE id = $1",
-      [decoded.sub]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(401).json({ error: "Authentication failed" });
-    }
-
-    req.user = { id: result.rows[0].id, email: result.rows[0].email };
-    req.userId = result.rows[0].id;
-    return next();
+    decoded = jwt.verify(token, config.jwtSecret);
   } catch (error) {
     return res.status(401).json({ error: "Invalid or expired token" });
   }
-}
+
+  // A database error is not hidden as 401: it goes to the error handler (500).
+  const user = await findUserById(decoded.sub);
+  if (!user) {
+    return res.status(401).json({ error: "Authentication failed" });
+  }
+
+  req.user = user;
+  req.userId = user.id;
+  return next();
+});

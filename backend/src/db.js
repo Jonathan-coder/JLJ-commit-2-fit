@@ -15,10 +15,6 @@ export const pool = new pg.Pool({
       : process.env.DATABASE_URL || defaultDatabaseUrl,
 });
 
-export async function initDb() {
-  return Promise.resolve();
-}
-
 export async function resetTables() {
   if (process.env.NODE_ENV !== "test") {
     throw new Error("resetTables() can only be used when NODE_ENV=test");
