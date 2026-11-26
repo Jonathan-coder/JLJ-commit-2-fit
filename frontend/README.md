@@ -46,11 +46,18 @@ localStorage.setItem('c2f-api', 'http://192.168.0.10:3000')
 | Produktsuche (Name, Marke), Seiten à 20 | Backend | `GET /products?search=&limit=&offset=` |
 | Produkt per Barcode | Backend | `GET /products/:barcode` |
 | Neues Produkt speichern, Duplikat -> 409 | Backend | `POST /products` |
-| Tagebuch, Verlauf | lokal (Browser) | noch kein Endpunkt, Tabelle `intake_logs` existiert |
-| Profil, Tagesziel, Warnungen | lokal (Browser) | noch kein Endpunkt (`Profile API` in `docs/architecture.md`) |
-| Fasten-Timer, Favoriten | lokal (Browser) | optional |
+| Eintrag zum Tagebuch hinzufügen, löschen | Backend | `POST /intake`, `DELETE /intake/:id` (T094, T095) |
+| Tag auf "Heute" und in der Tagesansicht | Backend | `GET /diary?date=` (T094) |
+| Wochendiagramm, Durchschnitt, Warnungen im Verlauf | Backend | `GET /diary/totals?from=&to=` (T096) |
+| Profil (Körperdaten) | Backend, sobald vorhanden, sonst lokal | `GET/PUT /profile` (T097), das Backend hat den Endpunkt noch nicht und antwortet 404 |
+| Tagesziel, Warnungen berechnen | lokal (Browser) | rechnet aus dem Profil, siehe `js/state.js` |
+| Fasten-Timer, Favoriten, zuletzt benutzte Produkte | lokal (Browser) | optional |
 
-Lokale Daten liegen pro Konto im `localStorage`. Auf einem zweiten Gerät sind sie deshalb nicht sichtbar (Anforderung F11 ist damit erst erfüllt, wenn Tagebuch und Profil im Backend liegen).
+Das Tagebuch liegt auf dem Server und ist auf jedem Gerät mit demselben Konto gleich (F11). Während Daten geladen werden, zeigt die Seite "Wird geladen …". Ist der Server nicht erreichbar, erscheint eine Fehlermeldung mit "Erneut versuchen".
+
+Das Profil wird lokal gespeichert und nach kurzer Pause (0,8 s) per `PUT /profile` an den Server geschickt. Antwortet das Backend mit 404, bleibt es lokal, und die Profilseite sagt das. Die Feldnamen für `/profile` stehen in `api.js` (`profileToApi`, `profileFromApi`) und sind eine Annahme, die mit dem Backend abzustimmen ist.
+
+Lokale Daten (Profil, Favoriten, Fasten-Timer) liegen pro Konto im `localStorage` und sind auf einem zweiten Gerät nicht sichtbar.
 
 ## Aufbau
 
@@ -63,8 +70,8 @@ frontend/
     ├── config.js       Adresse des Backends
     ├── api.js          alle REST-Aufrufe (C2F.api.*), Token, deutsche Fehlertexte, Zugangsschutz
     ├── data.js         feste Werte und die Demo-Daten für den simulierten Scan
-    ├── state.js        lokaler Zustand, Tagesziel (Mifflin-St Jeor), Warnlogik
-    ├── ui.js           gemeinsame Bausteine (Toast, Warnboxen, Makro-Balken, Mahlzeitenliste)
+    ├── state.js        lokaler Zustand, Tagebuch vom Server laden (loadDiary, loadTotals), Tagesziel (Mifflin-St Jeor), Warnlogik
+    ├── ui.js           gemeinsame Bausteine (Toast, Warnboxen, Lade- und Fehleranzeige, Makro-Balken, Mahlzeitenliste)
     └── login.js, heute.js, produkte.js, verlauf.js, fasten.js, profil.js   je ein Skript pro Seite
 ```
 Die Skripte teilen sich den Namensraum `window.C2F` und werden in dieser Reihenfolge geladen:
@@ -75,6 +82,8 @@ kommt die Funktion dazu in `api.js`, und `state.js` ruft sie statt `localStorage
 
 - **Scan:** Die Kamera ist nicht angebunden. "Barcode scannen" liefert Demo-Barcodes (`SIM_BC` in `js/data.js`), die Abfrage im Backend ist echt. Barcodes lassen sich auch eintippen. Die Nährwerte beim Scan sind Demo-Werte (`OCR`).
 - **Nährwerte:** Das Backend speichert nur kcal, Eiweiß, Kohlenhydrate und Fett pro 100 g. Zucker, Salz und Portionsgrößen gibt es dort nicht, deshalb zeigt das Frontend nur Mengen in Gramm.
-- **Barcode:** Das Backend verlangt einen Barcode mit 8 bis 14 Ziffern. Ein Produkt ohne Barcode kann nicht gespeichert werden.
+- **Barcode:** Der Barcode ist optional (T078). Wenn er angegeben wird, muss er aus 8 bis 14 Ziffern bestehen.
+- **Tagebuch von früher:** Einträge, die ältere Versionen des Frontends nur im Browser gespeichert haben, werden nicht mehr angezeigt und nicht auf den Server übertragen.
+- **Profil:** Die Felder von `/profile` sind noch nicht festgelegt (siehe oben).
 - **Schwellen:** Die Warnschwellen (zu hoch ab 115 %, zu niedrig unter 70 %) und die Makro-Verteilung sind ein Vorschlag und noch nicht mit dem PO abgestimmt.
-- **Tests:** Es gibt noch keine automatischen Frontend-Tests.
+- **Tests:** Die Skripte `util`, `config`, `api`, `data`, `state`, `ui` und `fasting` sind mit Unit-Tests abgedeckt (`npm test`, `npm run test:coverage` im Ordner `frontend`, 100 % Zeilen, Zweige und Funktionen). Die Seitenskripte (`heute.js`, `verlauf.js`, `produkte.js`, `profil.js` ...) sind nicht in den Unit-Tests enthalten und wurden im Browser geprüft, auch mit zwei Browsern am selben Konto (T098) und bei 360, 390 und 412 px Breite (T099).

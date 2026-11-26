@@ -25,13 +25,8 @@
     var s = q.trim().toLowerCase();
     return s ? arr.filter(function (p) { return (p.name + ' ' + p.brand + ' ' + p.bc).toLowerCase().indexOf(s) >= 0; }) : arr;
   }
-  function recent() {
-    var seen = {}, out = [];
-    S.ue.slice().sort(function (a, b) { return a.id < b.id ? 1 : -1; }).forEach(function (e) {
-      if (!seen[e.snap.id]) { seen[e.snap.id] = true; out.push(e.snap); }
-    });
-    return out.slice(0, 10);
-  }
+  /* zuletzt zum Tagebuch hinzugefügte Produkte (lokal gemerkt, siehe C2F.rememberRecent) */
+  function recent() { return S.recent; }
 
   function load(reset) {
     var my = ++reqId, offset = reset ? 0 : list.items.length;
@@ -239,14 +234,23 @@
       showSheet(productHTML());
       draw();
     },
-    addcur: function () {
+    /* Eintrag im Tagebuch speichern: POST /intake mit Produkt, Menge und Mahlzeit (T095) */
+    addcur: function (t) {
       var g = grams();
       if (!(g > 0)) { C2F.toast('Bitte eine Menge größer als 0 eingeben.'); return; }
-      var p = cur.p, k = C2F.nutP(p, g).k, m = cur.meal;
-      S.ue.push({ id: 'u' + Date.now(), d: C2F.dayKey(0), m: m, g: Math.round(g * 10) / 10, snap: p });
-      C2F.save();
-      C2F.flashToast(p.name + ' zu ' + MEALS[m] + ' hinzugefügt (+' + fmt(k) + ' kcal).');
-      location.href = 'heute.html';
+      var p = cur.p, k = C2F.nutP(p, g).k, m = cur.meal, amount = Math.round(g * 10) / 10;
+      if (amount <= 0) { C2F.toast('Bitte eine Menge von mindestens 0,1 g eingeben.'); return; }
+      t.disabled = true;
+      t.textContent = 'Wird gespeichert …';
+      api.addIntake({ productId: p.id, amountG: amount, meal: C2F.MEAL_KEYS[m] }).then(function () {
+        C2F.rememberRecent(p);
+        C2F.flashToast(p.name + ' zu ' + MEALS[m] + ' hinzugefügt (+' + fmt(k) + ' kcal).');
+        location.href = 'heute.html';
+      }, function (err) {
+        C2F.toast(err.message);
+        t.disabled = false;
+        t.textContent = 'Zum Tagebuch hinzufügen';
+      });
     },
     scanbc: function () { lookup(C2F.SIM_BC[simIdx++ % C2F.SIM_BC.length]); },
     scanmanual: function () { lookup(($('#bcIn').value || '').replace(/\s+/g, '')); },

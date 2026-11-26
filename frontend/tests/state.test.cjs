@@ -1,7 +1,7 @@
 // T083: public functions of state.js (local state, nutrition, daily target, warnings)
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { load } = require("./helpers.cjs");
+const { load, reply } = require("./helpers.cjs");
 
 const SCRIPTS = ["util.js", "config.js", "api.js", "data.js", "state.js"];
 const USER = { "c2f-token": "t", "c2f-user": JSON.stringify({ id: 7 }) };
@@ -20,7 +20,8 @@ test("without saved state the defaults are used (incl. Ramadan dates)", () => {
   const { C2F } = withState();
   assert.equal(C2F.S.profile.goal, "halten");
   assert.deepEqual(C2F.S.fast, { model: "16:8", startTs: null, from: "05:30", to: "18:00", startDate: "2027-02-08", endDate: "2027-03-09" });
-  assert.deepEqual(C2F.S.ue, []);
+  assert.deepEqual(C2F.S.recent, []);
+  assert.equal(C2F.S.ue, undefined);
 });
 
 test("saved state is loaded and an old fast setting gets the new Ramadan fields", () => {
@@ -54,30 +55,103 @@ test("save writes the state and ignores a blocked localStorage", () => {
 });
 
 test("resetState restores the defaults and saves them", () => {
-  const { C2F, storage } = withState({ profile: { age: 50 }, fast: {}, ue: [{ id: "u1" }], extra: true });
+  const { C2F, storage } = withState({ profile: { age: 50 }, fast: {}, recent: [yogurt], extra: true });
   C2F.resetState();
   assert.equal(C2F.S.profile.age, 22);
   assert.equal(C2F.S.extra, undefined);
-  assert.deepEqual(JSON.parse(storage.data.get(KEY)).ue, []);
+  assert.deepEqual(JSON.parse(storage.data.get(KEY)).recent, []);
 });
 
 /* ---------- nutrition ---------- */
 
-test("nutP scales values per 100 g; nut and logAll use the diary entries", () => {
-  const { C2F } = withState({ profile: {}, fast: {}, ue: [{ id: "u1", d: "2026-11-20", m: 0, g: 150, snap: yogurt }] });
+test("nutP scales values per 100 g", () => {
+  const { C2F } = withState();
   assert.deepEqual(C2F.nutP(yogurt, 50), { k: 30, p: 5, c: 2, f: 1 });
-  assert.deepEqual(C2F.nut(C2F.logAll()[0]), { k: 90, p: 15, c: 6, f: 3 });
+  assert.deepEqual(C2F.nutP(yogurt, 150), { k: 90, p: 15, c: 6, f: 3 });
 });
 
-test("dayTotals adds up only the entries of that day", () => {
-  const ue = [
-    { id: "a", d: "2026-11-20", m: 0, g: 100, snap: yogurt },
-    { id: "b", d: "2026-11-20", m: 1, g: 200, snap: yogurt },
-    { id: "c", d: "2026-11-19", m: 0, g: 100, snap: yogurt },
+test("rememberRecent puts the product first, without duplicates, and keeps at most 10", () => {
+  const { C2F, storage } = withState();
+  const product = (id) => ({ id, name: "P" + id, k: 1, p: 1, c: 1, f: 1 });
+  for (let id = 1; id <= 12; id += 1) C2F.rememberRecent(product(id));
+  assert.deepEqual(C2F.S.recent.map((p) => p.id), [12, 11, 10, 9, 8, 7, 6, 5, 4, 3]);
+
+  C2F.rememberRecent(product(5));
+  assert.deepEqual(C2F.S.recent.map((p) => p.id), [5, 12, 11, 10, 9, 8, 7, 6, 4, 3]);
+  assert.deepEqual(JSON.parse(storage.data.get(KEY)).recent.map((p) => p.id), [5, 12, 11, 10, 9, 8, 7, 6, 4, 3]);
+});
+
+/* ---------- diary from the server (T094, T096) ---------- */
+
+const apiEntry = (id, meal, amountG, name, kcal) => ({
+  id, productId: 1, productName: name, brand: null, meal, amountG, consumedAt: "2026-11-20T07:30:00.000Z", day: "2026-11-20",
+  kcal, protein: 10, carbs: 4.5, fat: 2,
+});
+
+test("zeroTotals returns a new object with zeros every time", () => {
+  const { C2F } = withState();
+  assert.deepEqual(C2F.zeroTotals(), { k: 0, p: 0, c: 0, f: 0 });
+  assert.notEqual(C2F.zeroTotals(), C2F.zeroTotals());
+});
+
+test("totalsFromApi renames kcal, protein, carbs and fat", () => {
+  const { C2F } = withState();
+  assert.deepEqual(C2F.totalsFromApi({ day: "2026-11-20", entries: 2, kcal: 300, protein: 20, carbs: 30, fat: 10 }), { k: 300, p: 20, c: 30, f: 10 });
+});
+
+test("entryFromApi maps the meal name to its index and keeps the nutrients calculated by the server", () => {
+  const { C2F } = withState();
+  assert.deepEqual(C2F.entryFromApi(apiEntry(9, "dinner", 150, "Reis", 195)), { id: 9, day: "2026-11-20", m: 2, g: 150, name: "Reis", n: { k: 195, p: 10, c: 4.5, f: 2 } });
+  assert.equal(C2F.entryFromApi(apiEntry(1, "breakfast", 1, "x", 1)).m, 0);
+  assert.equal(C2F.entryFromApi(apiEntry(1, "lunch", 1, "x", 1)).m, 1);
+  assert.equal(C2F.entryFromApi(apiEntry(1, "snack", 1, "x", 1)).m, 3);
+});
+
+test("diaryFromApi flattens the meals in the order of the day and converts the totals", () => {
+  const { C2F } = withState();
+  const diary = {
+    day: "2026-11-20",
+    totals: { day: "2026-11-20", entries: 3, kcal: 400, protein: 30, carbs: 40, fat: 12 },
+    meals: {
+      breakfast: [apiEntry(1, "breakfast", 100, "Müsli", 150)],
+      lunch: [],
+      dinner: [apiEntry(2, "dinner", 200, "Reis", 200), apiEntry(3, "dinner", 50, "Brot", 50)],
+      snack: [],
+    },
+  };
+  const result = C2F.diaryFromApi(diary);
+  assert.equal(result.day, "2026-11-20");
+  assert.deepEqual(result.totals, { k: 400, p: 30, c: 40, f: 12 });
+  assert.deepEqual(result.entries.map((e) => [e.id, e.m, e.name]), [[1, 0, "Müsli"], [2, 2, "Reis"], [3, 2, "Brot"]]);
+});
+
+test("loadDiary asks GET /diary for the day and converts the answer; errors are passed on", async () => {
+  const empty = { day: "2026-11-20", totals: { kcal: 0, protein: 0, carbs: 0, fat: 0 }, meals: { breakfast: [], lunch: [], dinner: [], snack: [] } };
+  const urls = [];
+  const answers = [reply(200, empty), reply(500, { error: "Internal server error" })];
+  const { C2F } = withState(undefined, { fetch: (url) => { urls.push(url); return Promise.resolve(answers.shift()); } });
+
+  assert.deepEqual(await C2F.loadDiary("2026-11-20"), { day: "2026-11-20", totals: { k: 0, p: 0, c: 0, f: 0 }, entries: [] });
+  assert.deepEqual(urls, ["http://localhost:3000/diary?date=2026-11-20"]);
+  await assert.rejects(C2F.loadDiary("2026-11-20"), { status: 500 });
+});
+
+test("loadTotals returns the totals by day and leaves out days without entries; errors are passed on", async () => {
+  const days = [
+    { day: "2026-11-19", entries: 1, kcal: 1800, protein: 90, carbs: 200, fat: 60 },
+    { day: "2026-11-20", entries: 2, kcal: 500, protein: 30, carbs: 50, fat: 20 },
   ];
-  const { C2F } = withState({ profile: {}, fast: {}, ue });
-  assert.deepEqual(C2F.dayTotals("2026-11-20"), { k: 180, p: 30, c: 12, f: 6 });
-  assert.deepEqual(C2F.dayTotals("2026-01-01"), { k: 0, p: 0, c: 0, f: 0 });
+  const urls = [];
+  const answers = [reply(200, { from: "2026-11-14", to: "2026-11-20", days }), reply(200, { from: "a", to: "b", days: [] }), reply(401, { error: "x" })];
+  const { C2F } = withState(undefined, { fetch: (url) => { urls.push(url); return Promise.resolve(answers.shift()); } });
+
+  assert.deepEqual(await C2F.loadTotals("2026-11-14", "2026-11-20"), {
+    "2026-11-19": { k: 1800, p: 90, c: 200, f: 60 },
+    "2026-11-20": { k: 500, p: 30, c: 50, f: 20 },
+  });
+  assert.deepEqual(urls, ["http://localhost:3000/diary/totals?from=2026-11-14&to=2026-11-20"]);
+  assert.deepEqual(await C2F.loadTotals("a", "b"), {});
+  await assert.rejects(C2F.loadTotals("a", "b"), { status: 401 });
 });
 
 /* ---------- daily target (Mifflin-St Jeor) ---------- */
