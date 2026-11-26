@@ -5,6 +5,8 @@
   var C2F = window.C2F;
 
   C2F.MEALS = ['Frühstück', 'Mittagessen', 'Abendessen', 'Snack'];
+  /* gleiche Reihenfolge wie MEALS: so heißen die Mahlzeiten im Backend (POST /intake, GET /diary) */
+  C2F.MEAL_KEYS = ['breakfast', 'lunch', 'dinner', 'snack'];
   C2F.WD = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
   C2F.ACT = [
     { l: 'Kaum Bewegung', f: 1.2 },

@@ -1,8 +1,6 @@
-/* state.js – lokaler Zustand (localStorage, pro Konto) und Berechnungen.
-   Vorerst lokal, weil das Backend dafür noch keine Endpunkte hat:
-   Tagebuch, Profil, Favoriten und Fasten-Timer.
-   Sobald es sie gibt (siehe docs/architecture.md: Intake API, Profile API),
-   werden die Zugriffe hier durch C2F.api-Aufrufe ersetzt. */
+/* state.js – lokaler Zustand (localStorage, pro Konto), Berechnungen und Laden des Tagebuchs.
+   Das Tagebuch liegt seit T094-T096 auf dem Server (GET /diary, GET /diary/totals, POST/DELETE /intake).
+   Vorerst lokal bleiben Profil (bis es /profile gibt, T097), Favoriten, zuletzt benutzte Produkte und Fasten-Timer. */
 (function () {
   'use strict';
   var C2F = window.C2F;
@@ -15,8 +13,8 @@
     return {
       profile: { sex: 'm', age: 22, h: 180, w: 75, act: 1, goal: 'halten' },
       favs: [],   /* Produkte (Kopie der API-Daten) */
-      fast: { model: '16:8', startTs: null, from: '05:30', to: '18:00', startDate: '2027-02-08', endDate: '2027-03-09' },
-      ue: []      /* Tagebuch: { id, d: 'JJJJ-MM-TT', m: Mahlzeit 0-3, g: Gramm, snap: Produkt } */
+      recent: [], /* zuletzt zum Tagebuch hinzugefügte Produkte, neueste zuerst (Filter "Zuletzt") */
+      fast: { model: '16:8', startTs: null, from: '05:30', to: '18:00', startDate: '2027-02-08', endDate: '2027-03-09' }
     };
   };
   function load() {
@@ -36,24 +34,41 @@
     C2F.save();
   };
 
-  C2F.logAll = function () { return S.ue; };
-
   /* Nährwerte von g Gramm eines Produkts (Werte im Produkt gelten pro 100 g) */
   C2F.nutP = function (p, g) {
     var f = g / 100;
     return { k: p.k * f, p: p.p * f, c: p.c * f, f: p.f * f };
   };
-  C2F.nut = function (e) { return C2F.nutP(e.snap, e.g); };
 
-  C2F.dayTotals = function (key) {
-    var t = { k: 0, p: 0, c: 0, f: 0 };
-    S.ue.forEach(function (e) {
-      if (e.d === key) {
-        var n = C2F.nut(e);
-        t.k += n.k; t.p += n.p; t.c += n.c; t.f += n.f;
-      }
+  /* Zuletzt benutzte Produkte: das Produkt kommt nach vorn, höchstens 10 bleiben */
+  C2F.rememberRecent = function (p) {
+    S.recent = [p].concat(S.recent.filter(function (r) { return r.id !== p.id; })).slice(0, 10);
+    C2F.save();
+  };
+
+  /* ---------- Tagebuch vom Server (T094, T096) ---------- */
+
+  C2F.zeroTotals = function () { return { k: 0, p: 0, c: 0, f: 0 }; };
+  /* Summen der API { kcal, protein, carbs, fat } in die Kurzform der Oberfläche { k, p, c, f } */
+  C2F.totalsFromApi = function (t) { return { k: t.kcal, p: t.protein, c: t.carbs, f: t.fat }; };
+  /* Eintrag der API in die Form für die Mahlzeitenliste: n = Nährwerte des Eintrags (vom Server berechnet) */
+  C2F.entryFromApi = function (e) {
+    return { id: e.id, day: e.day, m: C2F.MEAL_KEYS.indexOf(e.meal), g: e.amountG, name: e.productName, n: C2F.totalsFromApi({ kcal: e.kcal, protein: e.protein, carbs: e.carbs, fat: e.fat }) };
+  };
+  /* Ein Tag: { day, totals, entries } mit allen Einträgen in der Reihenfolge der Mahlzeiten */
+  C2F.diaryFromApi = function (d) {
+    var entries = [];
+    C2F.MEAL_KEYS.forEach(function (key) { entries = entries.concat(d.meals[key].map(C2F.entryFromApi)); });
+    return { day: d.day, totals: C2F.totalsFromApi(d.totals), entries: entries };
+  };
+  C2F.loadDiary = function (day) { return C2F.api.diary(day).then(C2F.diaryFromApi); };
+  /* Summen je Tag von bis einschließlich als Objekt { 'JJJJ-MM-TT': { k, p, c, f } }; Tage ohne Einträge fehlen */
+  C2F.loadTotals = function (from, to) {
+    return C2F.api.diaryTotals(from, to).then(function (r) {
+      var byDay = {};
+      r.days.forEach(function (d) { byDay[d.day] = C2F.totalsFromApi(d); });
+      return byDay;
     });
-    return t;
   };
 
   /* Tagesziel nach Mifflin-St Jeor */

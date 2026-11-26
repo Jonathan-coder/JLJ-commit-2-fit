@@ -46,6 +46,7 @@
         <select class="in" data-pr="goal"><option value="abnehmen">Abnehmen</option><option value="halten">Gewicht halten</option><option value="zunehmen">Zunehmen</option></select>
       </label>
     </section>
+    <p class="sub" id="profSync" role="status" style="margin:8px 2px 0"></p>
     <section class="card tgt" style="margin-top:14px">
       <p class="k">Tagesziel</p>
       <p class="big"><span id="tgKcal"></span> <small>kcal</small></p>
@@ -58,7 +59,7 @@
       </dl>
       <p class="sub">Berechnung nach Mifflin-St Jeor. Eine Warnung erscheint bei mehr als 115 % des Ziels und ab 18 Uhr bei weniger als 70 %. Die Schwellen sind ein Vorschlag und noch nicht mit dem PO abgestimmt.</p>
     </section>
-    <p class="note">Profil, Tagebuch und Fasten-Timer liegen vorerst nur in diesem Browser (pro Konto). Das Löschen entfernt sie hier, Produkte und Konto im Backend bleiben bestehen.</p>
+    <p class="note">Das Tagebuch liegt auf dem Server. Profil, Favoriten und Fasten-Timer liegen vorerst in diesem Browser (pro Konto), das Profil wird zusätzlich gespeichert, sobald das Backend dafür einen Endpunkt hat. "Lokale Daten löschen" entfernt nur die Daten in diesem Browser, Tagebuch, Produkte und Konto im Backend bleiben bestehen.</p>
     <div style="margin-top:10px"><button class="btn" id="resetBtn">Lokale Daten löschen</button></div>
   </main>
   <nav class="tabs" aria-label="Hauptnavigation">
