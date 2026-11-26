@@ -81,7 +81,7 @@ Repositories: `users.js` (find by id / e-mail, create), `products.js` (search wi
 
 Rule: **routes and middleware never call `pool.query`**. A new query is added as a function in the matching repository and gets a test.
 
-## Data model (status Sprint 3)
+## Data model (status Sprint 4)
 
 | Table / view | Columns | Notes |
 |---|---|---|
@@ -90,6 +90,8 @@ Rule: **routes and middleware never call `pool.query`**. A new query is added as
 | `intake_logs` | id, user_id, product_id, amount_g, **meal**, consumed_at, created_at | `meal` = breakfast / lunch / dinner / snack (default snack) |
 | view `intake_entries` | entry + product name/brand, `day`, kcal, protein, carbs, fat | nutrients = value per 100 g × amount_g / 100 |
 | view `daily_intake_totals` | user_id, day, entries, kcal, protein, carbs, fat | one row per user and day |
+| `user_profiles` | **user_id** (PK → users), sex, age, height_cm, weight_kg, activity_level, goal, updated_at | one profile per user (T090); sex `male`/`female`, age 12–100, height 120–230 cm, weight 35–250 kg, activity 0–3, goal `lose`/`maintain`/`gain` |
+| `fasting_sessions` | id, user_id, model, started_at, planned_end, ended_at, ramadan_first_day, ramadan_last_day, fast_from, fast_to | T092; interval models 16:8/18:6/20:4 have a planned end, Ramadan has first/last day and the daily window; `ended_at` NULL = running, only one running session per user |
 
 ### Design decisions for the diary (T049)
 - **Meal on the entry:** the frontend groups the diary by meal, so `intake_logs.meal` stores it (migration `1794336000000`).
@@ -110,3 +112,20 @@ Rule: **routes and middleware never call `pool.query`**. A new query is added as
 These functions are the basis for the REST endpoints of the diary (T054). Errors carry a `statusCode` (400/404), which the central error handler returns.
 
 Tests: `backend/tests/diary.test.js` (T052). Demo data: `npm run seed` adds a 7-day diary for `demo@commit2fit.test` (T058).
+
+### Profiles and fasting sessions (T090–T092, Sprint 4)
+Profile and fasting timer were only stored in the browser (localStorage), so they were not the same on a second device (F11).
+
+| Function | Purpose |
+|---|---|
+| `getProfile(userId)` | profile or `null` |
+| `saveProfile(userId, profile)` | create or replace the profile (one per user); 400 for invalid values |
+| `startSession(userId, { model, startedAt?, firstDay?, lastDay?, from?, to? })` | start a fasting session; planned end = start + 16/18/20 h; Ramadan needs first/last day and from/to; a second running session → 409 |
+| `getActiveSession(userId)` | running session or `null` |
+| `endSession(userId, endedAt?)` | stop the running session (never before its start) |
+| `listSessions(userId, limit?)` | history, newest first |
+
+The field names of the profile are the ones the frontend already uses in `frontend/js/api.js` (T097): `sex`, `age`, `height`, `weight`, `activityLevel`, `goal`.
+The REST endpoints `GET/PUT /profile` and the fasting endpoints still have to be added on top of these functions (hand-over, see T093).
+
+Tests: `backend/tests/profiles.test.js`, `backend/tests/fasting.test.js`. `npm run seed` also adds a demo profile for `demo@commit2fit.test`.
