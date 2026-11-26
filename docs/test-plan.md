@@ -6,7 +6,7 @@ Owner: Test Engineer (Sprint 3/4). Status: Sprint 4 (T073).
 
 | Level | What | Tool | Where |
 |---|---|---|---|
-| Database / repository | Migrations, constraints, views, diary queries | `node:test` + PostgreSQL test database | `backend/tests/diary.test.js` |
+| Database / repository | Migrations, constraints, views, diary queries, profiles, fasting sessions | `node:test` + PostgreSQL test database | `backend/tests/diary.test.js`, `profiles.test.js`, `fasting.test.js` |
 | API integration | Every REST endpoint incl. auth, validation (400/404, never 500), owner isolation | `node:test` + `supertest` | `auth`, `products`, `diary.api` tests |
 | Concurrency | Several users at the same time (NF03) | `supertest`, parallel requests | `backend/tests/concurrency.test.js` |
 | API contract | `openapi.yaml` is a valid OpenAPI document | `@apidevtools/swagger-parser` | `backend/tests/openapi.test.js` |
@@ -48,6 +48,7 @@ Coverage is measured with Node's built-in test coverage (`--experimental-test-co
 | Backend, baseline 20.11.2026 (T081) | 38 | 96.9 % | 83.3 % | 90.7 % |
 | Backend after T082/T083 | 65 | **100 %** | **100 %** | **100 %** |
 | Frontend after T083 (before: no tests) | 65 | **100 %** | **100 %** | **100 %** |
+| Backend after T090–T092 (profiles, fasting sessions) | 85 | **100 %** | **100 %** | **100 %** |
 | Minimum in CI (both, CI fails below) | | 100 % | 100 % | 100 % |
 
 Rules from the feedback of 20.11.2026:
@@ -72,7 +73,8 @@ Rules from the feedback of 20.11.2026:
 | C02 REST + documentation | US15 | `openapi`: spec is valid | covered |
 | F02 Scan, F10 external DB | US04, US16 | – | **gap:** Open Food Facts client (T055) not implemented yet; tests need a mocked HTTP client |
 | F06 Warnings | US10 | frontend `state`: status/checks (too much, too little, fat, protein, 18:00 rule), daily target | covered (frontend) |
-| F07 Fasting | US11 | frontend `fasting`: 16:8/18:6/20:4, Ramadan before / during (day X of N) / after, invalid dates and times (T077) | covered (frontend) |
+| F06 Profile for the daily target | US07 | `profiles`: create, replace, owner only, every invalid field → 400, DB limits | covered (backend database layer; endpoint open) |
+| F07 Fasting | US11 | frontend `fasting`: 16:8/18:6/20:4, Ramadan before / during (day X of N) / after, invalid dates and times (T077); backend `fasting`: sessions, planned end, Ramadan fields, one running session (409), end, history | covered (frontend + backend database layer) |
 | NF01 Usability, NF02 Responsive | US18 | – | manual test planned (usability test with 3+ users, 3 phone sizes) |
 | NF04 Fast load time | US12 | – | measure with browser dev tools, screenshot in the documentation (PO: numbers not fixed) |
 | C01 Ad-free | – | – | manual check of dependencies (no ad SDKs) |

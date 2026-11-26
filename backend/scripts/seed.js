@@ -94,6 +94,16 @@ async function main() {
     }
   }
 
+  // T090/T091: demo profile (only if the demo user has none yet)
+  if (userId !== null) {
+    await pool.query(
+      `INSERT INTO user_profiles (user_id, sex, age, height_cm, weight_kg, activity_level, goal)
+       VALUES ($1, 'male', 22, 180, 75, 1, 'maintain')
+       ON CONFLICT (user_id) DO NOTHING`,
+      [userId]
+    );
+  }
+
   console.log("Seed data applied successfully.");
 }
 
